@@ -6,7 +6,7 @@
 
 // drawing types
 const DOT = "DOT", LINE = "LINE", CIRCLE = "CIRCLE", PARALLELOGRAM = "PARALLELOGRAM",
-  TOOLTIP = "TOOLTIP", CIRCLE_RADIUS = 11
+  TOOLTIP = "TOOLTIP", CIRCLE_RADIUS = 11, RED = "#85144b", BLUE = "#0074D9", YELLOW = "#FFDC00"
 
 let canvas, content
 
@@ -18,6 +18,10 @@ const dots = []
 let isDraggingDot = false
 // index to determine which index is being dragged
 let nearbyDotIndex = -1
+
+// to display area of both circle and parallelogram
+let areaOfParallelogram = 0.0
+let areaOfCircle = 0.0
 
 function startCanvas() {
   canvas = document.getElementById("geo_canvas")
@@ -50,21 +54,21 @@ function drawGeometry(TYPE, center = null, nextCenter = null, verticies = null) 
     case DOT:
       content.arc(center.x, center.y, CIRCLE_RADIUS, 0, 2 * Math.PI)
       // dot color = red
-      content.strokeStyle = "#85144b"
+      content.strokeStyle = RED
       break;
 
     // drawing line
     // reference: https://www.w3schools.com/tags/canvas_beginpath.asp
     case LINE:
       // line color = blue
-      content.strokeStyle = "#0074D9"
+      content.strokeStyle = BLUE
       content.moveTo(center.x, center.y)
       content.lineTo(nextCenter.x, nextCenter.y)
       break;
 
     // finish drawing parallelogram and circle
     case PARALLELOGRAM:
-      content.strokeStyle = "#0074D9"
+      content.strokeStyle = BLUE
       const fourthX = verticies[0].x - verticies[1].x + verticies[2].x
       const fourthY = verticies[0].y - verticies[1].y + verticies[2].y
       content.moveTo(verticies[0].x, verticies[0].y)
@@ -81,17 +85,20 @@ function drawGeometry(TYPE, center = null, nextCenter = null, verticies = null) 
       const newCenterY = (verticies[1].y + fourthVertexY) / 2.0
       const base = Math.sqrt(Math.pow((verticies[1].x - verticies[0].x), 2)
         + Math.pow((verticies[1].y - verticies[0].y), 2))
-      // height formula isn't correct. close enough value for now.
-      // need to figure out how to find height or width of the parallelogram
-      const height = Math.sqrt(Math.pow((verticies[2].x - verticies[1].x), 2)
-        + Math.pow((verticies[2].y - verticies[1].y), 2))
-      const areaOfParallelogram = base * height
-      const newRadius = Math.sqrt(areaOfParallelogram / Math.PI)
-      // console.log('areaOfParallelogram', areaOfParallelogram)
-      // console.log('newRadius', Math.pow(newRadius, 2) * Math.PI)
-      content.arc(newCenterX, newCenterY, newRadius, 0, 2 * Math.PI)
+
+      const changeInX = verticies[1].x - verticies[0].x
+      const changeInY = verticies[1].y - verticies[0].y
+      const slope = changeInY / changeInX
+      const yIntercept = slope * (-verticies[0].x) + verticies[0].y
+      // dot product, reference : https://brilliant.org/wiki/dot-product-distance-between-point-and-a-line/
+      const height = Math.abs(((-slope) * verticies[2].x) + verticies[2].y - yIntercept) / Math.sqrt(Math.pow(slope, 2) + 1)
+
+      areaOfParallelogram = base * height
+      const circleRadius = Math.sqrt(areaOfParallelogram / Math.PI)
+      areaOfCircle = Math.pow(circleRadius, 2) * Math.PI
+      content.arc(newCenterX, newCenterY, circleRadius, 0, 2 * Math.PI)
       // circle color = yellow
-      content.strokeStyle = "#FFDC00"
+      content.strokeStyle = YELLOW
       content.stroke()
       break;
 
@@ -111,6 +118,13 @@ function reset() {
   clearCanvas()
   dots.length = 0
   drawBoard()
+  areaOfCircle = 0.0
+  areaOfParallelogram = 0.0
+  const parallelogramArea = document.querySelector(".parallelogramArea")
+  parallelogramArea.innerHTML = ``
+  const circleArea = document.querySelector(".circleArea")
+  circleArea.innerHTML = ``
+
 }
 
 // to draw grid
@@ -184,10 +198,16 @@ function checkMouseNearbyDot() {
 function dragDot(event) {
   getPosition(event)
   const msg = document.querySelector(".mouse_position")
-  msg.innerHTML = `x: ${mousePosition.x}, y: ${mousePosition.y}`
+  msg.innerHTML = `x: ${mousePosition.x.toFixed(3)}, y: ${mousePosition.y.toFixed(3)}`
 
   if (isDraggingDot) {
     dots[nearbyDotIndex] = mousePosition
+    if (dots.length > 2) {
+      const parallelogramArea = document.querySelector(".parallelogramArea")
+      parallelogramArea.innerHTML = `${areaOfParallelogram.toFixed(2)}`
+      const circleArea = document.querySelector(".circleArea")
+      circleArea.innerHTML = `${areaOfCircle.toFixed(2)}`
+    }
   }
   clearCanvas()
   drawBoard()
@@ -210,7 +230,3 @@ function getPosition(event) {
 }
 
 startCanvas()
-
-
-
-

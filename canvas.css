@@ -71,3 +71,16 @@ canvas {
   text-decoration: none;
   cursor: pointer;
 }
+
+.areaInfo {
+  display: block;
+  text-align: center;
+}
+
+.circleArea {
+  color: #FFDC00;
+}
+
+.parallelogramArea {
+  color: #0074D9;
+}
