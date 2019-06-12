@@ -110,6 +110,7 @@ function clearCanvas() {
 function reset() {
   clearCanvas()
   dots.length = 0
+  drawBoard()
 }
 
 // to draw grid
