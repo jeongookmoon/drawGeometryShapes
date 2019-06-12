@@ -1,14 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <link rel="stylesheet" href="canvas.css">
   <meta charset="UTF-8">
   <title>Canvas for Drawing Geometry Shapes</title>
 </head>
+
 <body>
-  <canvas class="canvas" id="geo_canvas" width="768" height="432" style="border:1px solid #c3c3c3">
-    Canvas does not work
+
+  <div class="menu">
+    <div id="about_button">About</div>
+    <div id="reset_button">Reset</div>
+  </div>
+  <!-- Modal reference: https://www.w3schools.com/howto/howto_css_modals.asp -->
+  <div class="modal" id="about_program">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <p><strong>Author : </strong>Jeong Ook Moon</p>
+      <p><strong>Description :</strong></p>
+      <p>1. Spot three dots on canvas</p>
+      <p>2. Parallogram and circle with identical areas and center of mass will be drawn based on the dots</p>
+      <p>3. Alter the shapes by moving the existing dots (marked as red circles)</p>
+      <p><strong>Reset: </strong>Reset the canvas</p>
+    </div>
+  </div>
+
+  <canvas class="canvas" id="geo_canvas" width="1024" height="768"
+    style="border-bottom:1px solid #c3c3c3; border-right:1px solid #c3c3c3;">
+    If you see this, it means canvas does not work on your browser
   </canvas>
+  <p class="mouse_position">Mouse Position on Canvas</p>
   <script src="canvas.js"></script>
 </body>
+
 </html>

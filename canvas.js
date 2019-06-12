@@ -1,27 +1,46 @@
 /**
- * author: Jeong Ook Moon
- * description: draw circle and parallelogram by selecting three dots on canvas
- *              user can reshape 
+ * @author: Jeong Ook Moon
+ * @description: draw circle and parallelogram with identical area and center by spotting three dots on canvas
+ *              user can reshape them by moving drawn dots (red circles)
  */
-
-const canvas = document.getElementById("geo_canvas")
-let content = canvas.getContext("2d")
-
-// current mouse position
-let mousePosition = {}
-// to handle duplicates and update for dragging dots
-const dots = new Map()
-// let warningMessage = {}
-let isDraggingDot = false
-
 
 // drawing types
 const DOT = "DOT", LINE = "LINE", CIRCLE = "CIRCLE", PARALLELOGRAM = "PARALLELOGRAM",
-  TOOLTIP = "TOOLTIP"
+  TOOLTIP = "TOOLTIP", CIRCLE_RADIUS = 11
 
-canvas.addEventListener("mousedown", drawDot)
-window.addEventListener("mouseup", doneDrawDot)
-canvas.addEventListener("drag", dragDot)
+let canvas, content
+
+// current mouse position
+let mousePosition = {}
+// dots storage
+const dots = []
+// flag to determine if user is dragging
+let isDraggingDot = false
+// index to determine which index is being dragged
+let nearbyDotIndex = -1
+
+function startCanvas() {
+  canvas = document.getElementById("geo_canvas")
+  content = canvas.getContext("2d")
+
+  canvas.addEventListener("mousedown", drawDot)
+  window.addEventListener("mouseup", doneDrawDot)
+  canvas.addEventListener("mousemove", dragDot)
+
+  drawBoard()
+
+  const resetButton = document.getElementById("reset_button")
+  resetButton.addEventListener("click", reset)
+
+  // modal
+  const about = document.getElementById("about_program")
+
+  const aboutButton = document.getElementById("about_button")
+  aboutButton.addEventListener("click", () => about.style.display = "block")
+
+  const closeButton = document.getElementsByClassName("close")[0];
+  closeButton.addEventListener("click", () => about.style.display = "none")
+}
 
 function drawGeometry(TYPE, center = null, nextCenter = null, verticies = null) {
   content.beginPath()
@@ -29,27 +48,31 @@ function drawGeometry(TYPE, center = null, nextCenter = null, verticies = null) 
     // drawing circle
     // reference: https://www.w3schools.com/tags/canvas_arc.asp
     case DOT:
-      content.arc(center.x, center.y, 11, 0, 2 * Math.PI)
-      content.strokeStyle = "red"
+      content.arc(center.x, center.y, CIRCLE_RADIUS, 0, 2 * Math.PI)
+      // dot color = red
+      content.strokeStyle = "#85144b"
       break;
 
     // drawing line
     // reference: https://www.w3schools.com/tags/canvas_beginpath.asp
     case LINE:
-      content.strokeStyle = "blue"
+      // line color = blue
+      content.strokeStyle = "#0074D9"
       content.moveTo(center.x, center.y)
       content.lineTo(nextCenter.x, nextCenter.y)
       break;
 
     // finish drawing parallelogram and circle
     case PARALLELOGRAM:
-      content.strokeStyle = "blue"
+      content.strokeStyle = "#0074D9"
       const fourthX = verticies[0].x - verticies[1].x + verticies[2].x
       const fourthY = verticies[0].y - verticies[1].y + verticies[2].y
       content.moveTo(verticies[0].x, verticies[0].y)
       content.lineTo(fourthX, fourthY)
       content.lineTo(verticies[2].x, verticies[2].y)
       content.stroke()
+      content.font = "12px Arial";
+      content.fillText(`(${(fourthX).toFixed(1)}, ${(fourthY).toFixed(1)})`, fourthX + 13, fourthY + 13);
       break;
 
     case CIRCLE:
@@ -58,6 +81,8 @@ function drawGeometry(TYPE, center = null, nextCenter = null, verticies = null) 
       const newCenterY = (verticies[1].y + fourthVertexY) / 2.0
       const base = Math.sqrt(Math.pow((verticies[1].x - verticies[0].x), 2)
         + Math.pow((verticies[1].y - verticies[0].y), 2))
+      // height formula isn't correct. close enough value for now.
+      // need to figure out how to find height or width of the parallelogram
       const height = Math.sqrt(Math.pow((verticies[2].x - verticies[1].x), 2)
         + Math.pow((verticies[2].y - verticies[1].y), 2))
       const areaOfParallelogram = base * height
@@ -65,63 +90,112 @@ function drawGeometry(TYPE, center = null, nextCenter = null, verticies = null) 
       // console.log('areaOfParallelogram', areaOfParallelogram)
       // console.log('newRadius', Math.pow(newRadius, 2) * Math.PI)
       content.arc(newCenterX, newCenterY, newRadius, 0, 2 * Math.PI)
-      content.strokeStyle = "yellow"
+      // circle color = yellow
+      content.strokeStyle = "#FFDC00"
       content.stroke()
       break;
 
+    case TOOLTIP:
+      content.font = "12px Arial";
+      content.fillText(`(${(center.x).toFixed(1)}, ${(center.y).toFixed(1)})`, center.x + 13, center.y + 13);
   }
   content.stroke()
   content.closePath()
 }
 
-function reset() {
+function clearCanvas() {
   content.clearRect(0, 0, canvas.width, canvas.height)
 }
 
-function draw() {
-  dots.forEach((value) => {
-    drawGeometry(DOT, value)
-  })
+function reset() {
+  clearCanvas()
+  dots.length = 0
+}
 
-  // if (warningMessage) {
-  //   content.font = "14px Arial"
-  //   content.fillText("Reached max dots", warningMessage.x, warningMessage.y)
-  // }
+// to draw grid
+// reference: https://stackoverflow.com/questions/11735856/draw-grid-table-on-canvas-html5
+function drawBoard() {
+  // Box width
+  const bw = 1024
+  // Box height
+  const bh = 768
+  // Padding
+  const p = 0
 
-  let coordinates
-  if (dots.size > 1) {
-    coordinates = [...dots.values()]
-    for (let i = 0; i < coordinates.length - 1; i++) {
-      drawGeometry(LINE, coordinates[i], coordinates[i + 1])
+  for (let x = 0; x <= bw; x += 25) {
+    content.beginPath()
+    content.moveTo(0.5 + x + p, p)
+    content.lineTo(0.5 + x + p, bh + p)
+
+    for (let x = 0; x <= bh; x += 25) {
+      content.moveTo(p, 0.5 + x + p)
+      content.lineTo(bw + p, 0.5 + x + p)
     }
-  }
-
-  if (dots.size === 3 && coordinates) {
-    drawGeometry(PARALLELOGRAM, null, null, coordinates)
-    drawGeometry(CIRCLE, null, null, coordinates)
+    content.strokeStyle = "#c3c3c3"
+    content.stroke()
+    content.closePath()
   }
 }
 
-function drawDot(event) {
-  getPosition(event)
-  if (dots.size < 3) {
-    dots.set(mousePosition.x + mousePosition.y, mousePosition)
+
+function drawShapes() {
+  dots.forEach((value) => {
+    drawGeometry(DOT, value)
+    drawGeometry(TOOLTIP, value)
+  })
+
+  if (dots.length > 1) {
+    for (let i = 0; i < dots.length - 1; i++) {
+      drawGeometry(LINE, dots[i], dots[i + 1])
+    }
   }
-  draw()
+
+  if (dots.length === 3) {
+    drawGeometry(PARALLELOGRAM, null, null, dots)
+    drawGeometry(CIRCLE, null, null, dots)
+  }
+}
+
+function drawDot() {
+  isDraggingDot = true
+  checkResult = checkMouseNearbyDot()
+  if (dots.length < 3 && !checkResult) {
+    dots.push(mousePosition)
+  }
+  drawShapes()
+}
+
+function checkMouseNearbyDot() {
+  const sum = mousePosition.x + mousePosition.y
+  let result = false
+
+  for (let i = 0; i < dots.length; i++) {
+    const dotMinMax = dots[i].x + dots[i].y
+    if (dotMinMax - CIRCLE_RADIUS <= sum && sum <= dotMinMax + CIRCLE_RADIUS) {
+      result = true
+      nearbyDotIndex = i
+      break
+    }
+  }
+  return result
 }
 
 function dragDot(event) {
   getPosition(event)
-  // for drag
-  if (dots.has(mousePosition.x + mousePosition.y)) {
-    console.log("happened??")
-    dots.set(mousePosition.x + mousePosition.y, mousePosition)
+  const msg = document.querySelector(".mouse_position")
+  msg.innerHTML = `x: ${mousePosition.x}, y: ${mousePosition.y}`
+
+  if (isDraggingDot) {
+    dots[nearbyDotIndex] = mousePosition
   }
-  draw()
+  clearCanvas()
+  drawBoard()
+  drawShapes()
 }
 
 function doneDrawDot() {
   isDraggingDot = false
+  nearbyDotIndex = -1
 }
 
 function getPosition(event) {
@@ -134,7 +208,7 @@ function getPosition(event) {
   }
 }
 
-
+startCanvas()
 
 
 
